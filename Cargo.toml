@@ -1,0 +1,16 @@
+[package]
+name = "egui_test"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+
+
+egui = "*"
+wgpu = "*"
+eframe = "*"
+
+glow = "*"
+image = "*"
+
+mycelium-bitfield = "*"

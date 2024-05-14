@@ -9,6 +9,7 @@ pub struct TileMapContext {
     program: glow::Program,
     vertex_array: glow::VertexArray,
     buffer: glow::NativeBuffer,
+    last_buffer_size: usize,
     pub texture: Texture,
 }
 
@@ -24,6 +25,29 @@ pub struct TileMap {
     pub pan_y: i32,
 
     pub tiles: Vec<Tile>, // tiles_x * tiles_y long
+}
+impl TileMap {
+    pub fn recalc(&mut self) {
+        for (index, val) in self.tiles.iter_mut().enumerate() {
+            val.x = (index % self.tiles_vis_x as usize) as u16;
+            val.y = (index / self.tiles_vis_x as usize) as u16;
+        }
+        for i in 0..4.min(self.tiles_x) {
+            let tmp_len = self.tiles.len();
+            for (index, val) in self.tiles
+                [((i * self.tiles_x) as usize)..(4 + (i * self.tiles_x) as usize).min(tmp_len)]
+                .iter_mut()
+                .enumerate()
+            {
+                val.x = 5;
+                val.y = 6;
+                val.attributes.set(TileAttributes::ROTATION, index as u16);
+
+                val.attributes.set(TileAttributes::HORIZONTAL, i & 0b1 >= 1);
+                val.attributes.set(TileAttributes::VERTICAL, i & 0b10 >= 1);
+            }
+        }
+    }
 }
 
 #[derive(Default, Clone, Copy, PartialEq, Eq)]
@@ -134,34 +158,18 @@ impl TileMapContext {
             pan_y: 0,
             tiles: vec![Default::default(); 30 * 26],
         };
-        for (index, val) in map.tiles.iter_mut().enumerate() {
-            val.x = (index % map.tiles_vis_x as usize) as u16;
-            val.y = (index / map.tiles_vis_x as usize) as u16;
-        }
-        for i in 0..4 {
-            for (index, val) in map.tiles
-                [((i * map.tiles_x) as usize)..(4 + (i * map.tiles_x) as usize)]
-                .iter_mut()
-                .enumerate()
-            {
-                val.x = 5;
-                val.y = 6;
-                val.attributes.set(TileAttributes::ROTATION, index as u16);
-
-                val.attributes.set(TileAttributes::HORIZONTAL, i & 0b1 >= 1);
-                val.attributes.set(TileAttributes::VERTICAL, i & 0b10 >= 1);
-            }
-        }
+        map.recalc();
         Some(TileMapContext {
             map,
             program,
             vertex_array,
             buffer,
             texture,
+            last_buffer_size: 0
         })
     }
 
-    pub fn paint(&self, gl: &glow::Context, zoom: f32) {
+    pub fn paint(&mut self, gl: &glow::Context, zoom: f32) {
         unsafe {
             gl.active_texture(glow::TEXTURE0);
             gl.bind_texture(glow::TEXTURE_2D, Some(self.texture.texture));
@@ -216,15 +224,28 @@ impl TileMapContext {
                 self.texture.height,
             );
 
+            
             gl.bind_buffer(glow::SHADER_STORAGE_BUFFER, Some(self.buffer));
-            gl.buffer_data_u8_slice(
-                glow::SHADER_STORAGE_BUFFER,
-                std::slice::from_raw_parts(
+            {
+                let raw_data = std::slice::from_raw_parts(
                     self.map.tiles.as_ptr().cast(),
                     self.map.tiles.len() * std::mem::size_of::<Tile>(),
-                ),
-                glow::DYNAMIC_DRAW,
-            );
+                );
+                if raw_data.len() <= self.last_buffer_size{
+                    gl.buffer_sub_data_u8_slice(
+                        glow::SHADER_STORAGE_BUFFER,
+                        0,
+                        raw_data,
+                    );
+                }else{
+                    gl.buffer_data_u8_slice(
+                        glow::SHADER_STORAGE_BUFFER,
+                        raw_data,
+                        glow::DYNAMIC_DRAW,
+                    );
+                    self.last_buffer_size = raw_data.len();
+                }
+            }
             // gl.buffer_sub_data_u8_slice(target, offset, src_data)
             gl.bind_buffer_base(glow::SHADER_STORAGE_BUFFER, 3, Some(self.buffer));
             gl.bind_buffer(glow::SHADER_STORAGE_BUFFER, None);

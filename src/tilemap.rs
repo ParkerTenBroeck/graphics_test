@@ -26,6 +26,28 @@ pub struct TileMap {
 
     pub tiles: Vec<Tile>, // tiles_x * tiles_y long
 }
+
+#[derive(Default, Clone, Copy, PartialEq, Eq)]
+#[repr(C)]
+pub struct Tile {
+    pub x: u16,
+    pub y: u16,
+    pub layer: u8,
+
+    _unused: u8,
+    pub attributes: TileAttributes,
+}
+
+mycelium_bitfield::bitfield! {
+    #[derive(Default, PartialEq, Eq)]
+    pub struct TileAttributes<u16> {
+        pub const HORIZONTAL: bool;
+        pub const VERTICAL: bool;
+        pub const ROTATION = 2;
+        const _UNUSED = 12;
+    }
+}
+
 impl TileMap {
     pub fn recalc(&mut self) {
         for (index, val) in self.tiles.iter_mut().enumerate() {
@@ -47,27 +69,6 @@ impl TileMap {
                 val.attributes.set(TileAttributes::VERTICAL, i & 0b10 >= 1);
             }
         }
-    }
-}
-
-#[derive(Default, Clone, Copy, PartialEq, Eq)]
-#[repr(C)]
-pub struct Tile {
-    pub x: u16,
-    pub y: u16,
-    pub layer: u8,
-
-    _unused: u8,
-    pub attributes: TileAttributes,
-}
-
-mycelium_bitfield::bitfield! {
-    #[derive(Default, PartialEq, Eq)]
-    pub struct TileAttributes<u16> {
-        pub const HORIZONTAL: bool;
-        pub const VERTICAL: bool;
-        pub const ROTATION = 2;
-        const _UNUSED = 12;
     }
 }
 
@@ -114,11 +115,7 @@ impl TileMapContext {
                         .expect("Cannot create shader");
                     gl.shader_source(
                         shader,
-                        &format!(
-                            "{}",
-                            // shader_version.version_declaration(),
-                            shader_source
-                        ),
+                        shader_source,
                     );
                     gl.compile_shader(shader);
                     assert!(

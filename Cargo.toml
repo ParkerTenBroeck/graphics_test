@@ -1,5 +1,5 @@
 [package]
-name = "egui_test"
+name = "graphics_test"
 version = "0.1.0"
 edition = "2021"
 
@@ -14,3 +14,6 @@ glow = "*"
 image = "*"
 
 mycelium-bitfield = "*"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen-futures = "0.4"

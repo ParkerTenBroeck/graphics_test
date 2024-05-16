@@ -1,6 +1,7 @@
 pub mod tilemap;
 pub mod sprites;
 
+#[cfg(not(target_arch = "wasm32"))]
 fn main() {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
@@ -13,19 +14,37 @@ fn main() {
         ..Default::default()
     };
     eframe::run_native(
-        "egui demo app",
+        "graphics test",
         options,
         Box::new(|cc| Box::new(Custom3d::new(cc).unwrap())),
     )
     .unwrap();
 }
 
-use std::sync::Arc;
+// When compiling to web using trunk:
+#[cfg(target_arch = "wasm32")]
+fn main() {
+
+    let web_options = eframe::WebOptions::default();
+
+    wasm_bindgen_futures::spawn_local(async {
+        eframe::WebRunner::new()
+            .start(
+                "graphics_test", // hardcode it
+                web_options,
+                Box::new(|cc| Box::new(Custom3d::new(cc).unwrap())),
+            )
+            .await
+            .expect("failed to start eframe");
+    });
+}
+
+use std::{io::Cursor, sync::Arc};
 
 use eframe::egui_glow;
 use egui::{mutex::Mutex, Slider, Widget};
 use egui_glow::glow;
-use glow::NativeTexture;
+use sprites::{SpriteAttributes, SpriteMapContext};
 
 use crate::tilemap::TileMapContext;
 
@@ -55,26 +74,66 @@ impl eframe::App for Custom3d {
             egui::ScrollArea::both()
                 .auto_shrink(false)
                 .show(ui, |ui| {
-                    ui.vertical(|ui| {
-                        ui.spacing_mut().item_spacing.x = 0.0;
-                        
-                        let mut lock = self.retro_graphics.lock();
+                    ui.horizontal(|ui|{
+                        ui.vertical(|ui| {
+                            ui.spacing_mut().item_spacing.x = 0.0;
+                            
+                            let mut lock = self.retro_graphics.lock();
+    
+                            
+                            Slider::new(&mut lock.tile_map.map.tiles_vis_x, 1..=30).text(" vis x").show_value(true).ui(ui);
+                            Slider::new(&mut lock.tile_map.map.tiles_vis_y, 1..=30).text(" vis y").show_value(true).ui(ui);
+    
+                            let mut changed = Slider::new(&mut lock.tile_map.map.tiles_x, 1..=30).text(" x").show_value(true).ui(ui).changed();
+                            changed |= Slider::new(&mut lock.tile_map.map.tiles_y, 1..=30).text(" y").show_value(true).ui(ui).changed();
+    
+                            if changed{
+                                lock.tile_map.map.recalc();
+                            }
+    
+                            ui.label(format!("pan x: {}", lock.tile_map.map.pan_x));
+                            ui.label(format!("pan y: {}", lock.tile_map.map.pan_y));
+                            ui.label(format!("zoom: {}", self.zoom));
+                        });
 
-                        
-                        Slider::new(&mut lock.tile_map.map.tiles_vis_x, 1..=30).text("vis x").show_value(true).ui(ui);
-                        Slider::new(&mut lock.tile_map.map.tiles_vis_y, 1..=30).text("vis y").show_value(true).ui(ui);
+                        ui.add_space(1.0);
 
-                        let mut changed = Slider::new(&mut lock.tile_map.map.tiles_x, 1..=30).text("x").show_value(true).ui(ui).changed();
-                        changed |= Slider::new(&mut lock.tile_map.map.tiles_y, 1..=30).text("y").show_value(true).ui(ui).changed();
+                        ui.vertical(|ui|{
 
-                        if changed{
-                            lock.tile_map.map.recalc();
-                        }
+                            let mut lock = self.retro_graphics.lock();
 
-                        ui.label(format!("pan x: {}", lock.tile_map.map.pan_x));
-                        ui.label(format!("pan y: {}", lock.tile_map.map.pan_y));
-                        ui.label(format!("zoom: {}", self.zoom));
+                            let item = &mut lock.sprite_map. thing[0];
+
+                            Slider::new(&mut item.x, 0..=256).text(" x").show_value(true).step_by(1.0).ui(ui);
+                            Slider::new(&mut item.y, 0..=256).text(" y").show_value(true).step_by(1.0).ui(ui);
+    
+                            Slider::new(&mut item.tx, 0..=255).text(" uv x").show_value(true).step_by(1.0).ui(ui);
+                            Slider::new(&mut item.ty, 0..=255).text(" uv y").show_value(true).step_by(1.0).ui(ui);
+
+                            Slider::new(&mut item.layer, 0..=255).text(" layer").show_value(true).step_by(1.0).ui(ui);
+                            
+                            let mut tmp = item.attribute.get(SpriteAttributes::HORIZONTAL);
+                            ui.checkbox(&mut tmp, "Horizontal Flip");
+                            item.attribute.set(SpriteAttributes::HORIZONTAL, tmp);
+                            
+                            let mut tmp = item.attribute.get(SpriteAttributes::VERTICAL);
+                            ui.checkbox(&mut tmp, "Vertical Flip");
+                            item.attribute.set(SpriteAttributes::VERTICAL, tmp);
+
+                            let mut tmp = item.attribute.get(SpriteAttributes::ROTATION);
+                            Slider::new(&mut tmp, 0..=3).text(" rot").show_value(true).ui(ui);
+                            item.attribute.set(SpriteAttributes::ROTATION, tmp);
+
+                            let mut tmp = item.attribute.get(SpriteAttributes::XSIZE);
+                            Slider::new(&mut tmp, 0..=3).text(" size x").show_value(true).ui(ui);
+                            item.attribute.set(SpriteAttributes::XSIZE, tmp);
+
+                            let mut tmp = item.attribute.get(SpriteAttributes::YSIZE);
+                            Slider::new(&mut tmp, 0..=3).text(" size y").show_value(true).step_by(1.0).ui(ui);
+                            item.attribute.set(SpriteAttributes::YSIZE, tmp);
+                        });
                     });
+                    
 
                     egui::Frame::canvas(ui.style()).show(ui, |ui| {
                         self.custom_painting(ui);
@@ -133,14 +192,15 @@ impl Custom3d {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct Texture {
-    pub texture: NativeTexture,
+    pub texture: glow::Texture,
     pub width: i32,
     pub height: i32,
 }
 
 impl Texture {
-    fn destroy(&self, gl: &glow::Context) {
+    pub fn destroy(&self, gl: &glow::Context) {
         use glow::HasContext as _;
         unsafe {
             gl.delete_texture(self.texture);
@@ -150,10 +210,12 @@ impl Texture {
 
 struct RetroGraphics {
     tile_map: TileMapContext,
+    sprite_map: SpriteMapContext,
 }
 
-fn rgba_image(path: impl AsRef<std::path::Path>) -> (i32, i32, Vec<u8>) {
-    let thing = image::open(path).unwrap();
+fn sprite_sheet() -> (i32, i32, Vec<u8>) {
+    let image = include_bytes!("../res/spritesheet.png");
+    let thing = image::load(Cursor::new(image), image::ImageFormat::Png).unwrap();
     let other = thing.to_rgba8();
     (
         thing.width() as i32,
@@ -165,10 +227,15 @@ fn rgba_image(path: impl AsRef<std::path::Path>) -> (i32, i32, Vec<u8>) {
 impl RetroGraphics {
     fn new(gl: &glow::Context) -> Option<Self> {
         use glow::HasContext as _;
+        unsafe{
+            // gl.enable(glow::BLEND);
+            gl.blend_func(glow::SRC_ALPHA, glow::ONE_MINUS_SRC_ALPHA);
+        }
+ 
 
         let texture;
         unsafe {
-            let (width, height, pixels) = rgba_image("./res/miniroguelike-8x8.png");
+            let (width, height, pixels) = sprite_sheet();
             let ntexture = gl.create_texture().unwrap();
             gl.bind_texture(glow::TEXTURE_2D, Some(ntexture));
 
@@ -209,6 +276,7 @@ impl RetroGraphics {
 
         Some(Self {
             tile_map: TileMapContext::new(gl, texture).expect("Failed to create tilemap"),
+            sprite_map: SpriteMapContext::new(gl, texture).expect("Failed to create tilemap"),
         })
     }
 
@@ -219,9 +287,27 @@ impl RetroGraphics {
     }
 
     fn paint(&mut self, gl: &glow::Context, zoom: f32, pan_x: f32, pan_y: f32) {
+        use glow::HasContext as _;
+        unsafe{
+            gl.blend_func(glow::SRC_ALPHA, glow::ONE_MINUS_SRC_ALPHA);
+            // gl.enable(glow::DEPTH_TEST);
+            // gl.clear(glow::DEPTH_BUFFER_BIT);
+        }
+
         let zoom = zoom.exp();
         self.tile_map.map.pan_x = (pan_x * 8.0 * self.tile_map.map.tiles_vis_x as f32) as i32;
         self.tile_map.map.pan_y = (pan_y * 8.0 * self.tile_map.map.tiles_vis_y as f32) as i32;
+        
+        
         self.tile_map.paint(gl, zoom);
+
+        self.sprite_map.paint(gl, zoom, 
+            self.tile_map.map.tiles_vis_x as i32 * 8, 
+            self.tile_map.map.tiles_vis_y as i32 * 8,
+            self.tile_map.map.pan_x,
+            self.tile_map.map.pan_y
+        );
+
+        
     }
 }

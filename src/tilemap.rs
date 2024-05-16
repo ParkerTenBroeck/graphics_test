@@ -8,7 +8,7 @@ pub struct TileMapContext {
 
     program: glow::Program,
     vertex_array: glow::VertexArray,
-    buffer: glow::NativeBuffer,
+    buffer: glow::Buffer,
     last_buffer_size: usize,
     pub texture: Texture,
 }
@@ -50,25 +50,23 @@ mycelium_bitfield::bitfield! {
 
 impl TileMap {
     pub fn recalc(&mut self) {
+        self.tiles =  vec![Default::default(); (self.tiles_x * self.tiles_y) as usize];
         for (index, val) in self.tiles.iter_mut().enumerate() {
-            val.x = (index % self.tiles_vis_x as usize) as u16;
-            val.y = (index / self.tiles_vis_x as usize) as u16;
+            val.x = (index % self.tiles_x as usize) as u16;
+            val.y = (index / self.tiles_x as usize) as u16;
+            val.layer = 50;
         }
-        for i in 0..4.min(self.tiles_x) {
-            let tmp_len = self.tiles.len();
-            for (index, val) in self.tiles
-                [((i * self.tiles_x) as usize)..(4 + (i * self.tiles_x) as usize).min(tmp_len)]
-                .iter_mut()
-                .enumerate()
-            {
-                val.x = 5;
-                val.y = 6;
-                val.attributes.set(TileAttributes::ROTATION, index as u16);
+        // for y in 0..4.min(self.tiles_y) {
+        //     for x in 0..4.min(self.tiles_x){
+        //         let val = &mut self.tiles[(x + y * self.tiles_x) as usize];
+        //         val.x = 5;
+        //         val.y = 6;
+        //         val.attributes.set(TileAttributes::ROTATION, x as u16);
 
-                val.attributes.set(TileAttributes::HORIZONTAL, i & 0b1 >= 1);
-                val.attributes.set(TileAttributes::VERTICAL, i & 0b10 >= 1);
-            }
-        }
+        //         val.attributes.set(TileAttributes::HORIZONTAL, y & 0b1 >= 1);
+        //         val.attributes.set(TileAttributes::VERTICAL, y & 0b10 >= 1);
+        //     }
+        // }
     }
 }
 
@@ -77,7 +75,7 @@ impl TileMapContext {
         gl.delete_program(self.program);
         gl.delete_vertex_array(self.vertex_array);
         gl.delete_buffer(self.buffer);
-        self.texture.destroy(gl);
+        // self.texture.destroy(gl);
     }
 
     pub fn new(gl: &glow::Context, texture: Texture) -> Option<Self> {
@@ -96,7 +94,9 @@ impl TileMapContext {
             if !shader_version.is_new_shader_interface() {
                 return None;
             }
-
+            // panic!("{}", 
+            // shader_version.version_declaration()
+            // );
             let (vertex_shader_source, fragment_shader_source) = (
                 include_str!("../shaders/tilemap/vertex.vert"),
                 include_str!("../shaders/tilemap/fragment.frag"),
@@ -115,7 +115,11 @@ impl TileMapContext {
                         .expect("Cannot create shader");
                     gl.shader_source(
                         shader,
-                        shader_source,
+                        &format!(
+                            "{}\n{}",
+                            shader_version.version_declaration(),
+                            shader_source
+                        ),
                     );
                     gl.compile_shader(shader);
                     assert!(
@@ -153,7 +157,7 @@ impl TileMapContext {
             tiles_vis_y: 15,
             pan_x: 0,
             pan_y: 0,
-            tiles: vec![Default::default(); 30 * 26],
+            tiles: Vec::new(),
         };
         map.recalc();
         Some(TileMapContext {

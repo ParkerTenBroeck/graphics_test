@@ -1,4 +1,4 @@
-#version 430
+#extension GL_ARB_separate_shader_objects : enable
 
 const vec2 verts[4] = vec2[4](
     vec2(-1.0, -1.0),
@@ -35,12 +35,15 @@ struct Tile
 {
     int pos;
     int attributes;
+    int padding[2];
 };
 
-layout(std430, binding = 3) buffer tileBuf
-{
-  Tile tiles[];
-};
+layout (location = 3) in vec2 position;
+Tile tiles[1];
+// layout (location = 0) in Tile tileBuf;
+// {
+//   Tile tiles[];
+// };
 
 void main() {
 
@@ -67,37 +70,36 @@ void main() {
     ivec2 tuv = uvs[index]; 
 
     // removes rounding artifacts by squizing in each corner by epsilon* (random value I found that works)
-    uv.x = tuv.x * -4.20e-07 + (1 - tuv.x) * 4.20e-07;
-    uv.y = tuv.y * -4.20e-07 + (1 - tuv.y) * 4.20e-07;
+    uv.x = float(tuv.x) * -4.20e-07 + float(1 - tuv.x) * 4.20e-07;
+    uv.y = float(tuv.y) * -4.20e-07 + float(1 - tuv.y) * 4.20e-07;
 
     tuv.x *= 8;
     tuv.y *= 8;
     tuv.x += (tile.pos & 0xFFFF) * 8;
     tuv.y += ((tile.pos >> 16) & 0xFFFF) * 8;
 
-    uv.x += tuv.x / float(map_width);
-    uv.y += tuv.y / float(map_height);
+    uv.x += float(tuv.x) / float(map_width);
+    uv.y += float(tuv.y) / float(map_height);
 
 
     index += index == 5 ? 1 : 0;
     index += rotate;
     index %= 4;
-    gl_Position = vec4(verts[index],  layer/255.0, 1.0);
+    gl_Position = vec4(verts[index],  float(layer)/255.0, 1.0);
 
-    gl_Position.x *= -(flip_h-1);
-    gl_Position.y *= -(flip_v-1);
-    // gl_Position.x *= cos(u_angle);
+    gl_Position.x *= float(-(flip_h-1));
+    gl_Position.y *= float(-(flip_v-1));
 
 
-    gl_Position.x /= tiles_vis_x;
-    gl_Position.x -= 1 - 1.0/tiles_vis_x;
-    gl_Position.x += tile_x * 2.0/tiles_vis_x;
-    gl_Position.x -= (pan_x%8)/8.0 * 2.0/tiles_vis_x;
+    gl_Position.x /= float(tiles_vis_x);
+    gl_Position.x -= 1.0 - 1.0/float(tiles_vis_x);
+    gl_Position.x += float(tile_x) * 2.0/float(tiles_vis_x);
+    gl_Position.x -= float(pan_x%8)/8.0 * 2.0/float(tiles_vis_x);
 
-    gl_Position.y /= -tiles_vis_y;
-    gl_Position.y += 1 - 1.0/tiles_vis_y;
-    gl_Position.y -= tile_y * 2.0/tiles_vis_y;
-    gl_Position.y += (pan_y%8)/8.0 * 2.0/tiles_vis_y;
+    gl_Position.y /= float(-tiles_vis_y);
+    gl_Position.y += 1.0 - 1.0/float(tiles_vis_y);
+    gl_Position.y -= float(tile_y) * 2.0/float(tiles_vis_y);
+    gl_Position.y += float(pan_y%8)/8.0 * 2.0/float(tiles_vis_y);
 
     gl_Position.x *= zoom;
     gl_Position.y *= zoom;

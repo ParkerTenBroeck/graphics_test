@@ -38,8 +38,14 @@ struct Tile
     int padding[2];
 };
 
+
+// layout (local_size_x = 8, local_size_y = 1, local_size_z = 1) in;
+layout (std430, binding = 0) buffer SSBO {
+    vec2 pos[];
+} ssbo;
+
 layout (location = 3) in vec2 position;
-Tile tiles[1];
+Tile tiles[55];
 // layout (location = 0) in Tile tileBuf;
 // {
 //   Tile tiles[];

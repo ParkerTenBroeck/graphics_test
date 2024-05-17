@@ -256,7 +256,7 @@ impl TileMapContext {
             gl.draw_arrays(
                 glow::TRIANGLES,
                 0,
-                ((self.map.tiles_vis_x as i32 + 1) * (self.map.tiles_vis_y as i32 + 1)) * 6,
+                (self.map.tiles_vis_x as i32 + 1) * (self.map.tiles_vis_y as i32 + 1) * 6,
             );
         }
     }

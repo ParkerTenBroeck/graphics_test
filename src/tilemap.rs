@@ -1,7 +1,7 @@
 use eframe::egui_glow;
 use glow::HasContext;
 
-use crate::Texture;
+use crate::resources::{ResourceManager, Texture};
 
 pub struct TileMapContext {
     pub map: TileMap,
@@ -72,78 +72,23 @@ impl TileMap {
 
 impl TileMapContext {
     pub unsafe fn destroy(&self, gl: &glow::Context) {
-        gl.delete_program(self.program);
         gl.delete_vertex_array(self.vertex_array);
         gl.delete_buffer(self.buffer);
-        // self.texture.destroy(gl);
     }
 
-    pub fn new(gl: &glow::Context, texture: Texture) -> Option<Self> {
+    pub fn new(gl: &glow::Context, resources: &mut ResourceManager, texture: Texture) -> Option<Self> {
         let buffer;
         unsafe {
             buffer = gl.create_buffer().unwrap();
         }
-        let shader_version = egui_glow::ShaderVersion::get(gl);
 
         let program;
-        let shaders: Vec<_>;
         let vertex_array;
         unsafe {
-            program = gl.create_program().expect("Cannot create program");
-
-            if !shader_version.is_new_shader_interface() {
-                return None;
-            }
-            // panic!("{}", 
-            // shader_version.version_declaration()
-            // );
-            let (vertex_shader_source, fragment_shader_source) = (
-                include_str!("../shaders/tilemap/vertex.vert"),
-                include_str!("../shaders/tilemap/fragment.frag"),
-            );
-
-            let shader_sources = [
-                (glow::VERTEX_SHADER, vertex_shader_source),
-                (glow::FRAGMENT_SHADER, fragment_shader_source),
-            ];
-
-            shaders = shader_sources
-                .iter()
-                .map(|(shader_type, shader_source)| {
-                    let shader = gl
-                        .create_shader(*shader_type)
-                        .expect("Cannot create shader");
-                    gl.shader_source(
-                        shader,
-                        &format!(
-                            "{}\n{}",
-                            shader_version.version_declaration(),
-                            shader_source
-                        ),
-                    );
-                    gl.compile_shader(shader);
-                    assert!(
-                        gl.get_shader_compile_status(shader),
-                        "Failed to compile custom_3d_glow {shader_type}: {}",
-                        gl.get_shader_info_log(shader)
-                    );
-
-                    gl.attach_shader(program, shader);
-                    shader
-                })
-                .collect();
-
-            gl.link_program(program);
-            assert!(
-                gl.get_program_link_status(program),
-                "{}",
-                gl.get_program_info_log(program)
-            );
-
-            for shader in shaders {
-                gl.detach_shader(program, shader);
-                gl.delete_shader(shader);
-            }
+            program = resources.get_program(gl, "tilemap", &[
+                (crate::resources::ProgramKind::Vertex, include_str!("../shaders/tilemap/vertex.vert")),
+                (crate::resources::ProgramKind::Fragment, include_str!("../shaders/tilemap/fragment.frag"))
+            ])?;
 
             vertex_array = gl
                 .create_vertex_array()
@@ -271,3 +216,5 @@ impl TileMapContext {
         }
     }
 }
+
+

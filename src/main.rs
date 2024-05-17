@@ -1,5 +1,6 @@
 pub mod tilemap;
 pub mod sprites;
+pub mod resources;
 
 #[cfg(not(target_arch = "wasm32"))]
 fn main() {
@@ -44,9 +45,10 @@ use std::{io::Cursor, sync::Arc};
 use eframe::egui_glow;
 use egui::{mutex::Mutex, Slider, Widget};
 use egui_glow::glow;
+use resources::ResourceManager;
 use sprites::{SpriteAttributes, SpriteMapContext};
 
-use crate::tilemap::TileMapContext;
+use crate::{resources::Texture, tilemap::TileMapContext};
 
 pub struct Custom3d {
     /// Behind an `Arc<Mutex<…>>` so we can pass it to [`egui::PaintCallback`] and paint later.
@@ -192,23 +194,8 @@ impl Custom3d {
     }
 }
 
-#[derive(Clone, Copy)]
-pub struct Texture {
-    pub texture: glow::Texture,
-    pub width: i32,
-    pub height: i32,
-}
-
-impl Texture {
-    pub fn destroy(&self, gl: &glow::Context) {
-        use glow::HasContext as _;
-        unsafe {
-            gl.delete_texture(self.texture);
-        }
-    }
-}
-
 struct RetroGraphics {
+    resources: ResourceManager,
     tile_map: TileMapContext,
     sprite_map: SpriteMapContext,
 }
@@ -231,6 +218,8 @@ impl RetroGraphics {
             // gl.enable(glow::BLEND);
             gl.blend_func(glow::SRC_ALPHA, glow::ONE_MINUS_SRC_ALPHA);
         }
+
+        let mut resources = ResourceManager::new();
  
 
         let texture;
@@ -271,18 +260,22 @@ impl RetroGraphics {
                 texture: ntexture,
                 width,
                 height,
-            }
+            };
+            resources.insert_texture(texture);
         }
 
         Some(Self {
-            tile_map: TileMapContext::new(gl, texture).expect("Failed to create tilemap"),
-            sprite_map: SpriteMapContext::new(gl, texture).expect("Failed to create tilemap"),
+            tile_map: TileMapContext::new(gl, &mut resources, texture).expect("Failed to create tilemap"),
+            sprite_map: SpriteMapContext::new(gl, &mut resources, texture).expect("Failed to create tilemap"),
+            resources: ResourceManager::new(),
         })
     }
 
-    fn destroy(&self, gl: &glow::Context) {
+    fn destroy(&mut self, gl: &glow::Context) {
         unsafe {
             self.tile_map.destroy(gl);
+            self.sprite_map.destroy(gl);
+            self.resources.destroy(gl);
         }
     }
 

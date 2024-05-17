@@ -38,7 +38,6 @@ struct Sprite
     int attributes;
 };
 layout (location = 2) in ivec2 spriteData;
-// Sprite sprites[1];
 
 // layout(std430, binding = 2) buffer spriteBuf
 // {

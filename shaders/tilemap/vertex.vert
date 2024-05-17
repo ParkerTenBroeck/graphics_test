@@ -1,4 +1,5 @@
 #extension GL_ARB_separate_shader_objects : enable
+#extension GL_ARB_explicit_attrib_location : enable
 
 const vec2 verts[4] = vec2[4](
     vec2(-1.0, -1.0),
@@ -35,21 +36,11 @@ struct Tile
 {
     int pos;
     int attributes;
-    int padding[2];
 };
 
+//layout (location = 3) in vec2 position;
+uniform ivec2 tiles[2048];
 
-// layout (local_size_x = 8, local_size_y = 1, local_size_z = 1) in;
-layout (std430, binding = 0) buffer SSBO {
-    vec2 pos[];
-} ssbo;
-
-layout (location = 3) in vec2 position;
-Tile tiles[55];
-// layout (location = 0) in Tile tileBuf;
-// {
-//   Tile tiles[];
-// };
 
 void main() {
 
@@ -60,7 +51,9 @@ void main() {
 
     tile_id = (tile_x + pan_x / 8) % tiles_x + ((tile_y + pan_y / 8) % tiles_y) * tiles_x;
 
-    Tile tile = tiles[tile_id];
+    Tile tile;
+    tile.pos = tiles[tile_id].x;
+    tile.attributes = tiles[tile_id].y;
 
     int layer = tile.attributes & 0xFF;
     // values multipied by 2

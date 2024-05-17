@@ -1,4 +1,5 @@
 #extension GL_ARB_separate_shader_objects : enable
+#extension GL_ARB_explicit_attrib_location : enable
 
 const ivec2 verts[4] = ivec2[4](
     ivec2(0, 0),

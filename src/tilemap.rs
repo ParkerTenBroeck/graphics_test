@@ -225,31 +225,41 @@ impl TileMapContext {
                 self.texture.height,
             );
 
-            
-            gl.bind_buffer(glow::SHADER_STORAGE_BUFFER, Some(self.buffer));
             {
                 let raw_data = std::slice::from_raw_parts(
                     self.map.tiles.as_ptr().cast(),
-                    self.map.tiles.len() * std::mem::size_of::<Tile>(),
+                    self.map.tiles.len() * std::mem::size_of::<Tile>() / std::mem::size_of::<i32>(),
                 );
-                if raw_data.len() <= self.last_buffer_size{
-                    gl.buffer_sub_data_u8_slice(
-                        glow::SHADER_STORAGE_BUFFER,
-                        0,
-                        raw_data,
-                    );
-                }else{
-                    gl.buffer_data_u8_slice(
-                        glow::SHADER_STORAGE_BUFFER,
-                        raw_data,
-                        glow::DYNAMIC_DRAW,
-                    );
-                    self.last_buffer_size = raw_data.len();
-                }
+
+                gl.uniform_2_i32_slice(
+                    gl.get_uniform_location(self.program, "tiles").as_ref(),
+                    raw_data
+                );
             }
-            // gl.buffer_sub_data_u8_slice(target, offset, src_data)
-            gl.bind_buffer_base(glow::SHADER_STORAGE_BUFFER, 3, Some(self.buffer));
-            gl.bind_buffer(glow::SHADER_STORAGE_BUFFER, None);
+            // gl.bind_buffer(glow::SHADER_STORAGE_BUFFER, Some(self.buffer));
+            // {
+            //     let raw_data = std::slice::from_raw_parts(
+            //         self.map.tiles.as_ptr().cast(),
+            //         self.map.tiles.len() * std::mem::size_of::<Tile>(),
+            //     );
+            //     if raw_data.len() <= self.last_buffer_size{
+            //         gl.buffer_sub_data_u8_slice(
+            //             glow::SHADER_STORAGE_BUFFER,
+            //             0,
+            //             raw_data,
+            //         );
+            //     }else{
+            //         gl.buffer_data_u8_slice(
+            //             glow::SHADER_STORAGE_BUFFER,
+            //             raw_data,
+            //             glow::DYNAMIC_DRAW,
+            //         );
+            //         self.last_buffer_size = raw_data.len();
+            //     }
+            // }
+            // // gl.buffer_sub_data_u8_slice(target, offset, src_data)
+            // gl.bind_buffer_base(glow::SHADER_STORAGE_BUFFER, 3, Some(self.buffer));
+            // gl.bind_buffer(glow::SHADER_STORAGE_BUFFER, None);
 
             gl.bind_vertex_array(Some(self.vertex_array));
 

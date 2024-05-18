@@ -43,7 +43,7 @@ fn main() {
 use std::{io::Cursor, sync::Arc};
 
 use eframe::egui_glow;
-use egui::mutex::Mutex;
+use egui::{mutex::Mutex, ComboBox, Slider, Widget};
 use egui_glow::glow;
 use resources::ResourceManager;
 use sprites::SpriteMapContext;
@@ -77,33 +77,47 @@ impl eframe::App for Custom3d {
                 .auto_shrink(false)
                 .show(ui, |ui| {
                     ui.horizontal(|ui|{
-                        ui.vertical(|ui| {
-                            ui.spacing_mut().item_spacing.x = 0.0;
-                            
-                            let mut lock = self.retro_graphics.lock();
-    
-                            
-                            // Slider::new(&mut lock.tile_map.map.tiles_vis_x, 1..=30).text(" vis x").show_value(true).ui(ui);
-                            // Slider::new(&mut lock.tile_map.map.tiles_vis_y, 1..=30).text(" vis y").show_value(true).ui(ui);
-    
-                            // let mut changed = Slider::new(&mut lock.tile_map.map.tiles_x, 1..=30).text(" x").show_value(true).ui(ui).changed();
-                            // changed |= Slider::new(&mut lock.tile_map.map.tiles_y, 1..=30).text(" y").show_value(true).ui(ui).changed();
-    
-                            // if changed{
-                            //     lock.tile_map.map.recalc();
-                            // }
-    
-                            // ui.label(format!("pan x: {}", lock.tile_map.map.pan_x));
-                            // ui.label(format!("pan y: {}", lock.tile_map.map.pan_y));
-                            // ui.label(format!("zoom: {}", self.zoom));
-                        });
 
-                        ui.add_space(1.0);
+                        let mut lock = self.retro_graphics.lock();
+                        ui.vertical(|ui|{
+                            ui.label(format!("zoom: {}", lock.screen.zoom));
+                            
+                            Slider::new(&mut lock.screen.screen_px_x, 0..=256).text(" pixels x").show_value(true).step_by(8.0).ui(ui);
+                            Slider::new(&mut lock.screen.screen_px_y, 0..=256).text(" pixels y").show_value(true).step_by(8.0).ui(ui);
+                        });
+                        for (index, item) in lock.layers.iter_mut().enumerate(){
+
+                            ui.add_space(1.0);
+                            
+                            ui.vertical(|ui|{
+                                match item{
+                                    Layer::Sprite(sprites) => {
+                                        ComboBox::new(index, "Sprite").show_ui(ui, |ui|{
+                                            for i in 0..sprites.thing.len(){
+                                                ui.label(format!("{i}"));
+                                            }
+                                        });
+                                    },
+                                    Layer::TileMap(tilemap) => {
+            
+                                        let mut changed = Slider::new(&mut tilemap.map.tiles_x, 1..=30).text(" tiles x").show_value(true).ui(ui).changed();
+                                        changed |= Slider::new(&mut tilemap.map.tiles_y, 1..=30).text(" tiles y").show_value(true).ui(ui).changed();
+                
+                                        if changed{
+                                            tilemap.map.recalc();
+                                        }
+                
+                                        ui.label(format!("pan x: {}", tilemap.map.pan_x));
+                                        ui.label(format!("pan y: {}", tilemap.map.pan_y));
+                                    
+                                    },
+                                    Layer::Bitmap() => todo!(),
+                                    Layer::Effect() => todo!(),
+                                }
+                            });
+                        }
 
                         ui.vertical(|ui|{
-
-                            let mut lock = self.retro_graphics.lock();
-
                             // let item = &mut lock.sprite_map. thing[0];
 
                             // Slider::new(&mut item.x, 0..=256).text(" x").show_value(true).step_by(1.0).ui(ui);
@@ -213,6 +227,7 @@ impl Custom3d {
     }
 }
 
+#[allow(unused)]
 enum Layer{
     Sprite(SpriteMapContext),
     TileMap(TileMapContext),

@@ -38,22 +38,21 @@ struct Tile
     int attributes;
 };
 
+layout (location = 2) in ivec2 tileData;
+
 //layout (location = 3) in vec2 position;
-uniform ivec2 tiles[2048];
+// uniform ivec2 tiles[1000];
 
 
 void main() {
+    int tile_x = gl_InstanceID % (tiles_vis_x+1);
+    int tile_y = gl_InstanceID / (tiles_vis_x+1);
 
-    int tile_id = gl_VertexID / 6;
-
-    int tile_x = tile_id % (tiles_vis_x+1);
-    int tile_y = tile_id / (tiles_vis_x+1);
-
-    tile_id = (tile_x + pan_x / 8) % tiles_x + ((tile_y + pan_y / 8) % tiles_y) * tiles_x;
+    //tile_id = (tile_x + pan_x / 8) % tiles_x + ((tile_y + pan_y / 8) % tiles_y) * tiles_x;
 
     Tile tile;
-    tile.pos = tiles[tile_id].x;
-    tile.attributes = tiles[tile_id].y;
+    tile.pos = tileData.x;//tiles[tile_id].x;
+    tile.attributes = tileData.y;
 
     int layer = tile.attributes & 0xFF;
     // values multipied by 2
@@ -63,7 +62,7 @@ void main() {
     int rotate = (tile.attributes>>18) & 3;
 
 
-    int index = gl_VertexID % 6;
+    int index = gl_VertexID;
 
     // translate the tilemap pixel coord into uv coords
     ivec2 tuv = uvs[index]; 

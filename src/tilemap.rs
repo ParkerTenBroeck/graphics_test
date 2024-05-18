@@ -1,6 +1,9 @@
 use glow::HasContext;
 
-use crate::{resources::{ResourceManager, Texture}, ScreenContext};
+use crate::{
+    resources::{ResourceManager, Texture},
+    ScreenContext,
+};
 
 pub struct TileMapContext {
     pub map: TileMap,
@@ -8,7 +11,8 @@ pub struct TileMapContext {
     program: glow::Program,
     vertex_array: glow::VertexArray,
     buffer: glow::Buffer,
-    // last_buffer_size: usize,
+    last_buffer_size: usize,
+    time_data: Vec<Tile>,
     pub texture: Texture,
 }
 
@@ -46,7 +50,7 @@ mycelium_bitfield::bitfield! {
 
 impl TileMap {
     pub fn recalc(&mut self) {
-        self.tiles =  vec![Default::default(); (self.tiles_x * self.tiles_y) as usize];
+        self.tiles = vec![Default::default(); (self.tiles_x * self.tiles_y) as usize];
         for (index, val) in self.tiles.iter_mut().enumerate() {
             val.x = (index % self.tiles_x as usize) as u16;
             val.y = (index / self.tiles_x as usize) as u16;
@@ -72,7 +76,11 @@ impl TileMapContext {
         gl.delete_buffer(self.buffer);
     }
 
-    pub fn new(gl: &glow::Context, resources: &mut ResourceManager, texture: Texture) -> Option<Self> {
+    pub fn new(
+        gl: &glow::Context,
+        resources: &mut ResourceManager,
+        texture: Texture,
+    ) -> Option<Self> {
         let buffer;
         unsafe {
             buffer = gl.create_buffer().unwrap();
@@ -81,10 +89,20 @@ impl TileMapContext {
         let program;
         let vertex_array;
         unsafe {
-            program = resources.get_program(gl, "tilemap", &[
-                (crate::resources::ProgramKind::Vertex, include_str!("../shaders/tilemap/vertex.vert")),
-                (crate::resources::ProgramKind::Fragment, include_str!("../shaders/tilemap/fragment.frag"))
-            ])?;
+            program = resources.get_program(
+                gl,
+                "tilemap",
+                &[
+                    (
+                        crate::resources::ProgramKind::Vertex,
+                        include_str!("../shaders/tilemap/vertex.vert"),
+                    ),
+                    (
+                        crate::resources::ProgramKind::Fragment,
+                        include_str!("../shaders/tilemap/fragment.frag"),
+                    ),
+                ],
+            )?;
 
             vertex_array = gl
                 .create_vertex_array()
@@ -105,6 +123,8 @@ impl TileMapContext {
             vertex_array,
             buffer,
             texture,
+            time_data: Vec::new(),
+            last_buffer_size: 0,
         })
     }
 
@@ -114,7 +134,10 @@ impl TileMapContext {
             gl.bind_texture(glow::TEXTURE_2D, Some(self.texture.texture));
 
             gl.use_program(Some(self.program));
-            gl.uniform_1_f32(gl.get_uniform_location(self.program, "zoom").as_ref(), screen.zoom);
+            gl.uniform_1_f32(
+                gl.get_uniform_location(self.program, "zoom").as_ref(),
+                screen.zoom,
+            );
 
             gl.uniform_1_i32(
                 gl.get_uniform_location(self.program, "tiles_x").as_ref(),
@@ -130,20 +153,20 @@ impl TileMapContext {
             gl.uniform_1_i32(
                 gl.get_uniform_location(self.program, "tiles_vis_x")
                     .as_ref(),
-                    vis_x,
+                vis_x,
             );
             gl.uniform_1_i32(
                 gl.get_uniform_location(self.program, "tiles_vis_y")
                     .as_ref(),
-                    vis_y,
+                vis_y,
             );
 
             let mut pan_x = self.map.pan_x;
-            if pan_x < 0{
+            if pan_x < 0 {
                 pan_x = self.map.tiles_x as i32 * 8 + pan_x % (self.map.tiles_x as i32 * 8);
             }
             let mut pan_y = self.map.pan_y;
-            if pan_y < 0{
+            if pan_y < 0 {
                 pan_y = self.map.tiles_y as i32 * 8 + pan_y % (self.map.tiles_y as i32 * 8);
             }
 
@@ -165,51 +188,39 @@ impl TileMapContext {
                 self.texture.height,
             );
 
-            {
-                let raw_data = std::slice::from_raw_parts(
-                    self.map.tiles.as_ptr().cast(),
-                    self.map.tiles.len() * std::mem::size_of::<Tile>() / std::mem::size_of::<i32>(),
-                );
-
-                gl.uniform_2_i32_slice(
-                    gl.get_uniform_location(self.program, "tiles").as_ref(),
-                    raw_data
-                );
-            }
-            // gl.bind_buffer(glow::SHADER_STORAGE_BUFFER, Some(self.buffer));
-            // {
-            //     let raw_data = std::slice::from_raw_parts(
-            //         self.map.tiles.as_ptr().cast(),
-            //         self.map.tiles.len() * std::mem::size_of::<Tile>(),
-            //     );
-            //     if raw_data.len() <= self.last_buffer_size{
-            //         gl.buffer_sub_data_u8_slice(
-            //             glow::SHADER_STORAGE_BUFFER,
-            //             0,
-            //             raw_data,
-            //         );
-            //     }else{
-            //         gl.buffer_data_u8_slice(
-            //             glow::SHADER_STORAGE_BUFFER,
-            //             raw_data,
-            //             glow::DYNAMIC_DRAW,
-            //         );
-            //         self.last_buffer_size = raw_data.len();
-            //     }
-            // }
-            // // gl.buffer_sub_data_u8_slice(target, offset, src_data)
-            // gl.bind_buffer_base(glow::SHADER_STORAGE_BUFFER, 3, Some(self.buffer));
-            // gl.bind_buffer(glow::SHADER_STORAGE_BUFFER, None);
-
             gl.bind_vertex_array(Some(self.vertex_array));
 
-            gl.draw_arrays(
-                glow::TRIANGLES,
-                0,
-                (vis_x + 1) * (vis_y + 1) * 6,
-            );
+            gl.bind_buffer(glow::ARRAY_BUFFER, Some(self.buffer));
+            gl.enable_vertex_attrib_array(2);
+
+            self.time_data.clear();
+            for y in 0..=vis_y {
+                let index = ((y + pan_y / 8) as isize % self.map.tiles_y as isize)
+                    * self.map.tiles_x as isize;
+
+                for x in 0..=vis_x {
+                    let index = index + (x + pan_x / 8) as isize % self.map.tiles_x as isize;
+
+                    self.time_data.push(self.map.tiles[index as usize]);
+                }
+            }
+            {
+                let raw_data = std::slice::from_raw_parts(
+                    self.time_data.as_ptr().cast(),
+                    self.time_data.len() * std::mem::size_of::<Tile>(),
+                );
+                if raw_data.len() <= self.last_buffer_size {
+                    gl.buffer_sub_data_u8_slice(glow::ARRAY_BUFFER, 0, raw_data);
+                } else {
+                    gl.buffer_data_u8_slice(glow::ARRAY_BUFFER, raw_data, glow::DYNAMIC_DRAW);
+                    self.last_buffer_size = raw_data.len();
+                }
+            }
+            gl.vertex_attrib_pointer_i32(2, 2, glow::INT, 2 * std::mem::size_of::<i32>() as i32, 0);
+            gl.vertex_attrib_divisor(2, 1);
+            gl.bind_buffer(glow::ARRAY_BUFFER, None);
+
+            gl.draw_arrays_instanced(glow::TRIANGLES, 0, 6, (vis_x + 1) * (vis_y + 1));
         }
     }
 }
-
-

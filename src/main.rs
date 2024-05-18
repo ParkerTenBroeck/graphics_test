@@ -43,10 +43,10 @@ fn main() {
 use std::{io::Cursor, sync::Arc};
 
 use eframe::egui_glow;
-use egui::{mutex::Mutex, Slider, Widget};
+use egui::mutex::Mutex;
 use egui_glow::glow;
 use resources::ResourceManager;
-use sprites::{SpriteAttributes, SpriteMapContext};
+use sprites::SpriteMapContext;
 
 use crate::{resources::Texture, tilemap::TileMapContext};
 
@@ -83,19 +83,19 @@ impl eframe::App for Custom3d {
                             let mut lock = self.retro_graphics.lock();
     
                             
-                            Slider::new(&mut lock.tile_map.map.tiles_vis_x, 1..=30).text(" vis x").show_value(true).ui(ui);
-                            Slider::new(&mut lock.tile_map.map.tiles_vis_y, 1..=30).text(" vis y").show_value(true).ui(ui);
+                            // Slider::new(&mut lock.tile_map.map.tiles_vis_x, 1..=30).text(" vis x").show_value(true).ui(ui);
+                            // Slider::new(&mut lock.tile_map.map.tiles_vis_y, 1..=30).text(" vis y").show_value(true).ui(ui);
     
-                            let mut changed = Slider::new(&mut lock.tile_map.map.tiles_x, 1..=30).text(" x").show_value(true).ui(ui).changed();
-                            changed |= Slider::new(&mut lock.tile_map.map.tiles_y, 1..=30).text(" y").show_value(true).ui(ui).changed();
+                            // let mut changed = Slider::new(&mut lock.tile_map.map.tiles_x, 1..=30).text(" x").show_value(true).ui(ui).changed();
+                            // changed |= Slider::new(&mut lock.tile_map.map.tiles_y, 1..=30).text(" y").show_value(true).ui(ui).changed();
     
-                            if changed{
-                                lock.tile_map.map.recalc();
-                            }
+                            // if changed{
+                            //     lock.tile_map.map.recalc();
+                            // }
     
-                            ui.label(format!("pan x: {}", lock.tile_map.map.pan_x));
-                            ui.label(format!("pan y: {}", lock.tile_map.map.pan_y));
-                            ui.label(format!("zoom: {}", self.zoom));
+                            // ui.label(format!("pan x: {}", lock.tile_map.map.pan_x));
+                            // ui.label(format!("pan y: {}", lock.tile_map.map.pan_y));
+                            // ui.label(format!("zoom: {}", self.zoom));
                         });
 
                         ui.add_space(1.0);
@@ -104,35 +104,35 @@ impl eframe::App for Custom3d {
 
                             let mut lock = self.retro_graphics.lock();
 
-                            let item = &mut lock.sprite_map. thing[0];
+                            // let item = &mut lock.sprite_map. thing[0];
 
-                            Slider::new(&mut item.x, 0..=256).text(" x").show_value(true).step_by(1.0).ui(ui);
-                            Slider::new(&mut item.y, 0..=256).text(" y").show_value(true).step_by(1.0).ui(ui);
+                            // Slider::new(&mut item.x, 0..=256).text(" x").show_value(true).step_by(1.0).ui(ui);
+                            // Slider::new(&mut item.y, 0..=256).text(" y").show_value(true).step_by(1.0).ui(ui);
     
-                            Slider::new(&mut item.tx, 0..=255).text(" uv x").show_value(true).step_by(1.0).ui(ui);
-                            Slider::new(&mut item.ty, 0..=255).text(" uv y").show_value(true).step_by(1.0).ui(ui);
+                            // Slider::new(&mut item.tx, 0..=255).text(" uv x").show_value(true).step_by(1.0).ui(ui);
+                            // Slider::new(&mut item.ty, 0..=255).text(" uv y").show_value(true).step_by(1.0).ui(ui);
 
-                            Slider::new(&mut item.layer, 0..=255).text(" layer").show_value(true).step_by(1.0).ui(ui);
+                            // Slider::new(&mut item.layer, 0..=255).text(" layer").show_value(true).step_by(1.0).ui(ui);
                             
-                            let mut tmp = item.attribute.get(SpriteAttributes::HORIZONTAL);
-                            ui.checkbox(&mut tmp, "Horizontal Flip");
-                            item.attribute.set(SpriteAttributes::HORIZONTAL, tmp);
+                            // let mut tmp = item.attribute.get(SpriteAttributes::HORIZONTAL);
+                            // ui.checkbox(&mut tmp, "Horizontal Flip");
+                            // item.attribute.set(SpriteAttributes::HORIZONTAL, tmp);
                             
-                            let mut tmp = item.attribute.get(SpriteAttributes::VERTICAL);
-                            ui.checkbox(&mut tmp, "Vertical Flip");
-                            item.attribute.set(SpriteAttributes::VERTICAL, tmp);
+                            // let mut tmp = item.attribute.get(SpriteAttributes::VERTICAL);
+                            // ui.checkbox(&mut tmp, "Vertical Flip");
+                            // item.attribute.set(SpriteAttributes::VERTICAL, tmp);
 
-                            let mut tmp = item.attribute.get(SpriteAttributes::ROTATION);
-                            Slider::new(&mut tmp, 0..=3).text(" rot").show_value(true).ui(ui);
-                            item.attribute.set(SpriteAttributes::ROTATION, tmp);
+                            // let mut tmp = item.attribute.get(SpriteAttributes::ROTATION);
+                            // Slider::new(&mut tmp, 0..=3).text(" rot").show_value(true).ui(ui);
+                            // item.attribute.set(SpriteAttributes::ROTATION, tmp);
 
-                            let mut tmp = item.attribute.get(SpriteAttributes::XSIZE);
-                            Slider::new(&mut tmp, 0..=3).text(" size x").show_value(true).ui(ui);
-                            item.attribute.set(SpriteAttributes::XSIZE, tmp);
+                            // let mut tmp = item.attribute.get(SpriteAttributes::XSIZE);
+                            // Slider::new(&mut tmp, 0..=3).text(" size x").show_value(true).ui(ui);
+                            // item.attribute.set(SpriteAttributes::XSIZE, tmp);
 
-                            let mut tmp = item.attribute.get(SpriteAttributes::YSIZE);
-                            Slider::new(&mut tmp, 0..=3).text(" size y").show_value(true).step_by(1.0).ui(ui);
-                            item.attribute.set(SpriteAttributes::YSIZE, tmp);
+                            // let mut tmp = item.attribute.get(SpriteAttributes::YSIZE);
+                            // Slider::new(&mut tmp, 0..=3).text(" size y").show_value(true).step_by(1.0).ui(ui);
+                            // item.attribute.set(SpriteAttributes::YSIZE, tmp);
                         });
                     });
                     
@@ -158,8 +158,8 @@ impl Custom3d {
         let area;
         {
             let lock = self.retro_graphics.lock();
-            let aspect_py = lock.tile_map.map.tiles_vis_y as f32 / lock.tile_map.map.tiles_vis_x as f32;
-            let aspect_px = lock.tile_map.map.tiles_vis_x as f32 / lock.tile_map.map.tiles_vis_y as f32;
+            let aspect_py = lock.screen.screen_px_y as f32 / lock.screen.screen_px_x as f32;
+            let aspect_px = lock.screen.screen_px_x as f32 / lock.screen.screen_px_y as f32;
             if aspect_py < aspect_px{
                 area = egui::Vec2::new(600.0, 600.0 * aspect_py);
             }else{
@@ -176,14 +176,33 @@ impl Custom3d {
 
         // Clone locals so we can move them into the paint callback:
         let zoom = self.zoom;
-        let panx = self.panx;
-        let pany = self.pany;
+        let pan_x = self.panx;
+        let pan_y = self.pany;
         let rotating_triangle = self.retro_graphics.clone();
 
         let cb = egui_glow::CallbackFn::new(move |_info, painter| {
-            rotating_triangle
-                .lock()
-                .paint(painter.gl(), zoom, panx, pany);
+            let mut lock = rotating_triangle.lock();
+            
+            lock.screen.zoom = zoom.exp();
+            let pan_x = (pan_x * lock.screen.screen_px_x as f32) as i32;
+            let pan_y = (pan_y * lock.screen.screen_px_x as f32) as i32;
+
+            for layer in lock.layers.iter_mut() {
+                match layer{
+                    Layer::Sprite(l) => {
+                        l.pan_x = pan_x;
+                        l.pan_y = pan_y;
+                    },
+                    Layer::TileMap(l) => {
+                        l.map.pan_x = pan_x;
+                        l.map.pan_y = pan_y;                    
+                    },
+                    Layer::Bitmap() => {},
+                    Layer::Effect() => {},
+                }
+            }    
+        
+            lock.paint(painter.gl());
         });
 
         let callback = egui::PaintCallback {
@@ -194,10 +213,45 @@ impl Custom3d {
     }
 }
 
+enum Layer{
+    Sprite(SpriteMapContext),
+    TileMap(TileMapContext),
+    Bitmap(),
+    Effect()
+}
+
+impl Layer{
+    pub unsafe fn destroy(&mut self, gl: &glow::Context){
+        match self{
+            Layer::Sprite(l) => l.destroy(gl),
+            Layer::TileMap(l) => l.destroy(gl),
+            Layer::Bitmap() => todo!(),
+            Layer::Effect() => todo!(),
+        }
+    }
+
+    pub unsafe fn paint(&mut self, gl: &glow::Context, screen: &ScreenContext){
+        match self{
+            Layer::Sprite(l) => l.paint(gl, screen),
+            Layer::TileMap(l) => l.paint(gl, screen),
+            Layer::Bitmap() => todo!(),
+            Layer::Effect() => todo!(),
+        }   
+    }
+}
+
+pub struct ScreenContext{
+    screen_px_x: i32,
+    screen_px_y: i32,
+    zoom: f32,
+}
+
 struct RetroGraphics {
     resources: ResourceManager,
-    tile_map: TileMapContext,
-    sprite_map: SpriteMapContext,
+    screen: ScreenContext,
+    layers: Vec<Layer>,
+    // tile_map: TileMapContext,
+    // sprite_map: SpriteMapContext,
 }
 
 fn sprite_sheet() -> (i32, i32, Vec<u8>) {
@@ -265,41 +319,49 @@ impl RetroGraphics {
         }
 
         Some(Self {
-            tile_map: TileMapContext::new(gl, &mut resources, texture).expect("Failed to create tilemap"),
-            sprite_map: SpriteMapContext::new(gl, &mut resources, texture).expect("Failed to create tilemap"),
+            layers: vec![
+                Layer::Sprite(SpriteMapContext::new(gl, &mut resources, texture).expect("Failed to create tilemap")),
+                Layer::TileMap( TileMapContext::new(gl, &mut resources, texture).expect("Failed to create tilemap")),
+            ],
+            screen: ScreenContext { screen_px_x: 256, screen_px_y: 224, zoom: 1.0 },
             resources: ResourceManager::new(),
         })
     }
 
     fn destroy(&mut self, gl: &glow::Context) {
         unsafe {
-            self.tile_map.destroy(gl);
-            self.sprite_map.destroy(gl);
+            for layer in &mut self.layers{
+                layer.destroy(gl)
+            }
+            // self.tile_map.destroy(gl);
+            // self.sprite_map.destroy(gl);
             self.resources.destroy(gl);
         }
     }
 
-    fn paint(&mut self, gl: &glow::Context, zoom: f32, pan_x: f32, pan_y: f32) {
+    fn paint(&mut self, gl: &glow::Context) {
         use glow::HasContext as _;
         unsafe{
             gl.blend_func(glow::SRC_ALPHA, glow::ONE_MINUS_SRC_ALPHA);
             // gl.enable(glow::DEPTH_TEST);
             // gl.clear(glow::DEPTH_BUFFER_BIT);
         }
+        for layer in self.layers.iter_mut().rev(){
+            unsafe{
+                layer.paint(gl, &self.screen);
+            }
+        }
 
-        let zoom = zoom.exp();
-        self.tile_map.map.pan_x = (pan_x * 8.0 * self.tile_map.map.tiles_vis_x as f32) as i32;
-        self.tile_map.map.pan_y = (pan_y * 8.0 * self.tile_map.map.tiles_vis_y as f32) as i32;
         
-        
-        self.tile_map.paint(gl, zoom);
+        // for layer in self.
+        // self.tile_map.paint(gl, zoom);
 
-        self.sprite_map.paint(gl, zoom, 
-            self.tile_map.map.tiles_vis_x as i32 * 8, 
-            self.tile_map.map.tiles_vis_y as i32 * 8,
-            self.tile_map.map.pan_x,
-            self.tile_map.map.pan_y
-        );
+        // self.sprite_map.paint(gl, zoom, 
+        //     self.tile_map.map.tiles_vis_x as i32 * 8, 
+        //     self.tile_map.map.tiles_vis_y as i32 * 8,
+        //     self.tile_map.map.pan_x,
+        //     self.tile_map.map.pan_y
+        // );
 
         
     }

@@ -1,16 +1,17 @@
-use eframe::egui_glow;
 use glow::HasContext;
 
-use crate::resources::{ResourceManager, Texture};
+use crate::{resources::{ResourceManager, Texture}, ScreenContext};
 
 
 
 #[derive(Clone)]
 pub struct SpriteMapContext{
-    texture: Texture,
     pub thing: Vec<Sprite>,
+    pub pan_x: i32, 
+    pub pan_y: i32,
 
 
+    texture: Texture,
     program: glow::Program,
     vertex_array: glow::VertexArray,
     buffer: glow::Buffer,
@@ -64,10 +65,10 @@ impl SpriteMapContext{
                 .expect("Cannot create vertex array");
         }
 
-        Some(Self { texture, thing: vec![
+        Some(Self { pan_x: 0, pan_y: 0, thing: vec![
             Sprite{ x: 10, y: 10, tx: 7*2, ty: 3*2, layer: 2, attribute: SpriteAttributes(0b00001010) },
             // Sprite{ x: 10, y: 10, tx: 5, ty: 0, layer: 3, attribute: SpriteAttributes(0b00000000) },
-        ], program, vertex_array, buffer, last_buffer_size: 0 })
+        ], program, vertex_array, buffer, last_buffer_size: 0, texture,  })
     }
 
     pub unsafe fn destroy(&self, gl: &glow::Context){
@@ -75,7 +76,7 @@ impl SpriteMapContext{
         gl.delete_buffer(self.buffer);
     }
     
-    pub fn paint(&mut self, gl: &glow::Context, zoom: f32, screen_px_x: i32, screen_px_y: i32, pan_x: i32, pan_y: i32) {
+    pub fn paint(&mut self, gl: &glow::Context, screen: &ScreenContext) {
         unsafe {
             gl.active_texture(glow::TEXTURE0);
             gl.bind_texture(glow::TEXTURE_2D, Some(self.texture.texture));
@@ -85,7 +86,7 @@ impl SpriteMapContext{
             gl.uniform_1_f32(
                 gl.get_uniform_location(self.program, "zoom")
                     .as_ref(),
-                    zoom,
+                    screen.zoom,
             );
 
             gl.uniform_1_i32(
@@ -102,23 +103,23 @@ impl SpriteMapContext{
             gl.uniform_1_i32(
                 gl.get_uniform_location(self.program, "screen_px_x")
                     .as_ref(),
-                    screen_px_x
+                    screen.screen_px_x
             );
             gl.uniform_1_i32(
                 gl.get_uniform_location(self.program, "screen_px_y")
                     .as_ref(),
-                    screen_px_y
+                    screen.screen_px_y
             );
 
             gl.uniform_1_i32(
                 gl.get_uniform_location(self.program, "pan_x")
                     .as_ref(),
-                    pan_x
+                    self.pan_x
             );
             gl.uniform_1_i32(
                 gl.get_uniform_location(self.program, "pan_y")
                     .as_ref(),
-                    pan_y
+                    self.pan_y
             );
 
 

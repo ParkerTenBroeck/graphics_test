@@ -1,7 +1,6 @@
-use eframe::egui_glow;
 use glow::HasContext;
 
-use crate::resources::{ResourceManager, Texture};
+use crate::{resources::{ResourceManager, Texture}, ScreenContext};
 
 pub struct TileMapContext {
     pub map: TileMap,
@@ -9,7 +8,7 @@ pub struct TileMapContext {
     program: glow::Program,
     vertex_array: glow::VertexArray,
     buffer: glow::Buffer,
-    last_buffer_size: usize,
+    // last_buffer_size: usize,
     pub texture: Texture,
 }
 
@@ -17,9 +16,6 @@ pub struct TileMapContext {
 pub struct TileMap {
     pub tiles_x: u16, // the number of tiles actually defined in the array
     pub tiles_y: u16,
-
-    pub tiles_vis_x: u16, // the # of tiles actually visible to the camera
-    pub tiles_vis_y: u16,
 
     pub pan_x: i32, //# of pixels to pan
     pub pan_y: i32,
@@ -98,8 +94,6 @@ impl TileMapContext {
         let mut map = TileMap {
             tiles_x: 30,
             tiles_y: 26,
-            tiles_vis_x: 20,
-            tiles_vis_y: 15,
             pan_x: 0,
             pan_y: 0,
             tiles: Vec::new(),
@@ -111,17 +105,16 @@ impl TileMapContext {
             vertex_array,
             buffer,
             texture,
-            last_buffer_size: 0
         })
     }
 
-    pub fn paint(&mut self, gl: &glow::Context, zoom: f32) {
+    pub fn paint(&mut self, gl: &glow::Context, screen: &ScreenContext) {
         unsafe {
             gl.active_texture(glow::TEXTURE0);
             gl.bind_texture(glow::TEXTURE_2D, Some(self.texture.texture));
 
             gl.use_program(Some(self.program));
-            gl.uniform_1_f32(gl.get_uniform_location(self.program, "zoom").as_ref(), zoom);
+            gl.uniform_1_f32(gl.get_uniform_location(self.program, "zoom").as_ref(), screen.zoom);
 
             gl.uniform_1_i32(
                 gl.get_uniform_location(self.program, "tiles_x").as_ref(),
@@ -132,15 +125,17 @@ impl TileMapContext {
                 self.map.tiles_y as i32,
             );
 
+            let vis_x = (screen.screen_px_x + 7) / 8;
+            let vis_y = (screen.screen_px_y + 7) / 8;
             gl.uniform_1_i32(
                 gl.get_uniform_location(self.program, "tiles_vis_x")
                     .as_ref(),
-                self.map.tiles_vis_x as i32,
+                    vis_x,
             );
             gl.uniform_1_i32(
                 gl.get_uniform_location(self.program, "tiles_vis_y")
                     .as_ref(),
-                self.map.tiles_vis_y as i32,
+                    vis_y,
             );
 
             let mut pan_x = self.map.pan_x;
@@ -211,7 +206,7 @@ impl TileMapContext {
             gl.draw_arrays(
                 glow::TRIANGLES,
                 0,
-                (self.map.tiles_vis_x as i32 + 1) * (self.map.tiles_vis_y as i32 + 1) * 6,
+                (vis_x + 1) * (vis_y + 1) * 6,
             );
         }
     }
